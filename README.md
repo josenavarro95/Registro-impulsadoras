@@ -148,16 +148,6 @@ git push -u origin main
 
 ---
 
-## 👥 Usuarios del sistema
-
-| Usuario | Contraseña inicial | Rol |
-|---|---|---|
-| `admin` | `Mari2025` | Administrador |
-| `userall` | `Abc1234` | Registro (impulsadoras) |
-
-> Las contraseñas se pueden cambiar desde el panel Admin → ⚙️ Config → Cambiar Contraseñas
-
----
 
 ## 🕐 Horarios de referencia
 
