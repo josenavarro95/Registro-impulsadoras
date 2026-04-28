@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1d4ed8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E&amp;A Registro">
+<link rel="manifest" href="manifest.json">
+<title>Electric &amp; Automation | Registro</title>
+
+<!-- Firebase SDK v9 Compat -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#f0f4f8;color:#1a202c;font-size:16px;
+}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+.screen{
+  display:none;flex-direction:column;
+  height:100vh;
+  height:100dvh; /* altura dinámica en móvil — excluye barra del navegador */
+  overflow:hidden;
+  position:absolute;top:0;left:0;width:100%;
+}
+.screen.active{display:flex;}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.app-header{
+  background:linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%);
+  color:white;padding:0.875rem 1rem;
+  box-shadow:0 2px 12px rgba(29,78,216,0.25);
+  flex-shrink:0;
+}
+.app-header .logo-text{font-size:1rem;font-weight:800;letter-spacing:0.5px}
+.app-header .subtitle{font-size:0.7rem;opacity:0.85;margin-top:1px}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.app-footer{
+  background:#1e293b;color:#94a3b8;
+  text-align:center;padding:0.5rem;
+  font-size:0.65rem;letter-spacing:0.5px;
+  flex-shrink:0;
+}
+.app-footer strong{color:#e2e8f0}
+
+/* ============================================================
+   SCROLLABLE CONTENT
+   ============================================================ */
+.content-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card{
+  background:white;border-radius:16px;
+  padding:1.25rem;margin:0.625rem 0.875rem;
+  box-shadow:0 2px 12px rgba(0,0,0,0.07);
+}
+.card-title{font-size:0.9rem;font-weight:700;color:#1a202c;margin-bottom:0.875rem}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:0.4rem;
+  padding:0.8rem 1.25rem;border-radius:12px;
+  font-size:0.9rem;font-weight:600;cursor:pointer;
+  border:none;transition:all 0.15s;width:100%;
+  text-decoration:none;
+}
+.btn:active{transform:scale(0.97);opacity:0.9}
+.btn-primary{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:white}
+.btn-success{background:linear-gradient(135deg,#059669,#10b981);color:white}
+.btn-warning{background:linear-gradient(135deg,#d97706,#f59e0b);color:white}
+.btn-danger{background:linear-gradient(135deg,#dc2626,#ef4444);color:white}
+.btn-outline{background:white;color:#1d4ed8;border:2px solid #1d4ed8}
+.btn-secondary{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+.btn-purple{background:linear-gradient(135deg,#7c3aed,#a855f7);color:white}
+.btn-lg{padding:1.1rem;font-size:1rem;border-radius:14px}
+
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
+.form-group{margin-bottom:0.875rem}
+.form-label{
+  display:block;font-size:0.72rem;font-weight:700;
+  color:#64748b;margin-bottom:0.3rem;
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+.form-control{
+  width:100%;padding:0.7rem 0.875rem;
+  border:2px solid #e2e8f0;border-radius:10px;
+  font-size:0.9rem;background:#f8fafc;
+  transition:border-color 0.2s,background 0.2s;
+  outline:none;color:#1a202c;
+  -webkit-appearance:none;
+}
+.form-control:focus{border-color:#3b82f6;background:white}
+.form-control::placeholder{color:#94a3b8}
+.input-wrap{position:relative}
+.input-wrap .i-icon{
+  position:absolute;left:0.75rem;top:50%;
+  transform:translateY(-50%);font-size:0.95rem;pointer-events:none;
+}
+.input-wrap .form-control{padding-left:2.25rem}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+.tab-bar{
+  display:flex;background:white;margin:0.625rem 0.875rem;
+  border-radius:12px;padding:0.2rem;gap:0.2rem;
+  box-shadow:0 1px 6px rgba(0,0,0,0.07);flex-shrink:0;
+}
+.tab-btn{
+  flex:1;padding:0.55rem 0.25rem;border-radius:8px;
+  border:none;background:transparent;font-size:0.72rem;
+  font-weight:700;color:#94a3b8;cursor:pointer;transition:all 0.2s;
+}
+.tab-btn.active{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:white}
+
+/* ============================================================
+   TIME BADGE
+   ============================================================ */
+.badge{
+  display:inline-flex;align-items:center;gap:0.2rem;
+  padding:0.2rem 0.6rem;border-radius:20px;
+  font-size:0.7rem;font-weight:700;
+}
+.badge-ok{background:#dcfce7;color:#166534}
+.badge-late{background:#fee2e2;color:#991b1b}
+.badge-early{background:#fef3c7;color:#92400e}
+.badge-info{background:#dbeafe;color:#1e40af}
+
+/* ============================================================
+   RECORD CARDS
+   ============================================================ */
+.record-card{
+  background:white;border-radius:12px;padding:0.875rem;
+  margin-bottom:0.625rem;
+  box-shadow:0 1px 6px rgba(0,0,0,0.06);
+  border-left:4px solid #e2e8f0;
+}
+.record-card.entrada{border-left-color:#0ea5e9}
+.record-card.salida{border-left-color:#a855f7}
+.record-card.ok{border-left-color:#10b981}
+.record-card.late{border-left-color:#ef4444}
+
+/* ============================================================
+   STAT GRID
+   ============================================================ */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;margin:0 0.875rem 0.625rem}
+.stat-card{
+  background:white;border-radius:12px;padding:0.875rem;
+  text-align:center;box-shadow:0 1px 6px rgba(0,0,0,0.06);
+}
+.stat-val{font-size:1.35rem;font-weight:800;color:#1d4ed8}
+.stat-lbl{font-size:0.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-top:0.2rem}
+
+/* ============================================================
+   PHOTO GRID
+   ============================================================ */
+.photo-grid{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem}
+.photo-thumb{
+  width:76px;height:76px;object-fit:cover;
+  border-radius:8px;cursor:pointer;
+  border:2px solid #e2e8f0;transition:transform 0.15s;
+}
+.photo-thumb:active{transform:scale(0.95)}
+
+/* ============================================================
+   LOADING OVERLAY
+   ============================================================ */
+#loadingOverlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(255,255,255,0.88);
+  display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:0.875rem;z-index:9000;
+}
+#loadingOverlay.active{display:flex}
+.spinner{
+  width:38px;height:38px;border:4px solid #e2e8f0;
+  border-top-color:#3b82f6;border-radius:50%;
+  animation:spin 0.75s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingText{font-size:0.8rem;color:#64748b;font-weight:600}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toast{
+  position:fixed;bottom:5rem;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  opacity:0;
+  background:#1e293b;color:white;
+  padding:0.65rem 1.1rem;border-radius:12px;
+  font-size:0.8rem;z-index:9500;
+  transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),
+             opacity 0.35s ease;
+  pointer-events:none;white-space:nowrap;
+  max-width:88vw;text-align:center;
+}
+#toast.show{
+  transform:translateX(-50%) translateY(0);
+  opacity:1;
+}
+#toast.ok{background:#059669}
+#toast.err{background:#dc2626}
+#toast.warn{background:#d97706}
+
+/* ============================================================
+   IMAGE PREVIEW MODAL
+   ============================================================ */
+#imgModal{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.92);
+  display:none;align-items:center;justify-content:center;
+  z-index:9800;flex-direction:column;gap:0.75rem;
+}
+#imgModal.active{display:flex}
+#imgModalImg{max-width:95vw;max-height:80vh;object-fit:contain;border-radius:8px}
+#imgModal .close-img{
+  background:rgba(255,255,255,0.15);color:white;
+  border:none;border-radius:50%;
+  width:40px;height:40px;font-size:1.1rem;cursor:pointer;
+}
+
+/* ============================================================
+   OPTION BUTTONS (entrada / salida)
+   ============================================================ */
+.opt-btn{
+  flex:1;padding:1.75rem 0.75rem;border-radius:18px;border:none;
+  cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:0.35rem;font-weight:800;
+  color:white;transition:all 0.15s;
+}
+.opt-btn:active{transform:scale(0.95)}
+.opt-btn .ob-icon{font-size:2.25rem}
+.opt-btn .ob-label{font-size:0.95rem;letter-spacing:0.5px}
+.opt-btn .ob-sub{font-size:0.68rem;opacity:0.85;font-weight:600}
+.ob-entrada{
+  background:linear-gradient(160deg,#0369a1,#0ea5e9);
+  box-shadow:0 6px 20px rgba(14,165,233,0.35);
+}
+.ob-salida{
+  background:linear-gradient(160deg,#6d28d9,#a855f7);
+  box-shadow:0 6px 20px rgba(168,85,247,0.35);
+}
+
+/* ============================================================
+   LOGIN SCREEN BG
+   ============================================================ */
+#screenLogin{
+  background:linear-gradient(160deg,#eff6ff 0%,#dbeafe 60%,#bfdbfe 100%);
+  justify-content:space-between;
+}
+.login-inner{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:1.5rem;
+}
+.login-box{
+  background:white;border-radius:24px;padding:1.75rem;
+  width:100%;max-width:360px;
+  box-shadow:0 8px 32px rgba(29,78,216,0.13);
+}
+
+/* ============================================================
+   SETUP SCREEN
+   ============================================================ */
+#screenSetup{
+  background:#fffbeb;justify-content:center;align-items:center;padding:1.5rem;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.divider{height:1px;background:#e2e8f0;margin:0.875rem 0}
+
+/* ============================================================
+   SUGGESTION BOX
+   ============================================================ */
+.suggest-box{
+  background:white;border:2px solid #3b82f6;border-top:none;
+  border-radius:0 0 10px 10px;
+  max-height:120px;overflow-y:auto;display:none;
+}
+.suggest-item{
+  padding:0.55rem 0.875rem;cursor:pointer;font-size:0.82rem;
+  border-bottom:1px solid #f1f5f9;color:#1a202c;
+}
+.suggest-item:last-child{border-bottom:none}
+.suggest-item:active{background:#eff6ff}
+
+/* ============================================================
+   PASSWORD SECTION
+   ============================================================ */
+.pass-section{
+  border:1px solid #e2e8f0;border-radius:12px;
+  padding:1rem;margin-bottom:0.875rem;
+}
+
+/* ============================================================
+   ALERT BOX
+   ============================================================ */
+.alert{border-radius:10px;padding:0.75rem;font-size:0.78rem;margin:0.625rem 0.875rem}
+.alert-info{background:#dbeafe;color:#1e40af;border-left:4px solid #3b82f6}
+.alert-warn{background:#fef3c7;color:#92400e;border-left:4px solid #f59e0b}
+.alert-success{background:#dcfce7;color:#166534;border-left:4px solid #10b981}
+
+/* ============================================================
+   MISC
+   ============================================================ */
+.text-muted{color:#94a3b8;font-size:0.75rem}
+.text-center{text-align:center}
+.flex-row{display:flex;gap:0.5rem}
+.flex-1{flex:1}
+.mt-1{margin-top:0.5rem}
+.section-header{
+  padding:0.625rem 0.875rem 0.2rem;
+  font-size:0.7rem;font-weight:700;
+  color:#94a3b8;text-transform:uppercase;letter-spacing:0.7px;
+}
+.empty-state{
+  text-align:center;padding:2.5rem 1rem;color:#94a3b8;
+}
+.empty-state .es-icon{font-size:2.5rem;margin-bottom:0.5rem}
+.empty-state .es-txt{font-size:0.85rem}
+
+/* Admin search suggestions */
+.admin-suggest-item{
+  display:flex;align-items:center;gap:0.625rem;
+  padding:0.65rem 0.875rem;cursor:pointer;
+  border-bottom:1px solid #f1f5f9;
+  transition:background 0.15s;
+}
+.admin-suggest-item:last-child{border-bottom:none}
+.admin-suggest-item:active{background:#eff6ff}
+.admin-suggest-item .asi-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.8rem;font-weight:800;color:white;flex-shrink:0;
+}
+.admin-suggest-item .asi-info{flex:1;min-width:0}
+.admin-suggest-item .asi-name{
+  font-size:0.85rem;font-weight:700;color:#1a202c;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.admin-suggest-item .asi-ced{font-size:0.72rem;color:#64748b;margin-top:1px}
+.admin-suggest-item .asi-badge{
+  font-size:0.65rem;background:#dbeafe;color:#1e40af;
+  padding:0.15rem 0.5rem;border-radius:10px;font-weight:700;flex-shrink:0;
+}
+
+/* Scrollbar thin */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     MODAL INACTIVIDAD
+     ============================================================ -->
+<div id="inactivityModal" style="
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.65);z-index:9700;
+  align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:white;border-radius:24px;padding:1.75rem;
+              width:100%;max-width:340px;text-align:center;
+              box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:3rem;margin-bottom:0.5rem">😴</div>
+    <h3 style="font-size:1.05rem;font-weight:800;color:#1a202c;margin-bottom:0.4rem">
+      ¿Sigues ahí?
+    </h3>
+    <p style="font-size:0.8rem;color:#64748b;margin-bottom:1rem;line-height:1.5">
+      La sesión se cerrará por inactividad en:
+    </p>
+    <!-- Countdown circle -->
+    <div style="position:relative;width:80px;height:80px;margin:0 auto 1.25rem">
+      <svg width="80" height="80" style="transform:rotate(-90deg)">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+        <circle id="countdownCircle" cx="40" cy="40" r="34" fill="none"
+                stroke="#ef4444" stroke-width="6"
+                stroke-dasharray="213.6" stroke-dashoffset="0"
+                style="transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div id="countdownNum" style="
+        position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        font-size:1.6rem;font-weight:900;color:#dc2626">
+        20
+      </div>
+    </div>
+    <div style="display:flex;gap:0.625rem">
+      <button onclick="continueSession()"
+              class="btn btn-primary flex-1" style="font-size:0.85rem">
+        ✅ Continuar
+      </button>
+      <button onclick="doLogout()"
+              class="btn" style="flex:1;background:#fff1f2;color:#dc2626;
+                                  border:2px solid #fecaca;font-size:0.85rem">
+        🚪 Salir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     LOADING OVERLAY
+     ============================================================ -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingText">Cargando…</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- IMAGE PREVIEW MODAL -->
+<div id="imgModal" onclick="closeImgModal()">
+  <button class="close-img" onclick="closeImgModal()">✕</button>
+  <img id="imgModalImg" src="" alt="Foto">
+  <a id="imgModalDown" href="" download target="_blank"
+     style="background:rgba(255,255,255,0.15);color:white;padding:0.5rem 1rem;
+            border-radius:10px;font-size:0.8rem;text-decoration:none;">
+    ⬇️ Descargar foto
+  </a>
+</div>
+
+<!-- ============================================================
+     SCREEN: SETUP (Firebase no configurado)
+     ============================================================ -->
+<div class="screen" id="screenSetup">
+  <div style="max-width:360px;width:100%">
+    <div style="font-size:2.5rem;text-align:center;margin-bottom:0.875rem">⚙️</div>
+    <h2 style="font-size:1.1rem;font-weight:800;color:#d97706;text-align:center;margin-bottom:0.5rem">
+      Configuración requerida
+    </h2>
+    <p style="font-size:0.8rem;color:#64748b;text-align:center;margin-bottom:1.25rem;line-height:1.5">
+      Debes completar la configuración de Firebase en el archivo <strong>index.html</strong>
+      antes de usar la aplicación.
+    </p>
+    <div style="background:#fef3c7;border-radius:12px;padding:1rem;font-size:0.78rem;color:#92400e;line-height:1.6">
+      <strong>Pasos:</strong><br>
+      1. Abre <code>index.html</code> en un editor<br>
+      2. Busca la sección <code>FIREBASE CONFIG</code><br>
+      3. Reemplaza los valores con tu configuración de Firebase<br>
+      4. Sube los archivos a GitHub Pages
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: LOGIN
+     ============================================================ -->
+<div class="screen active" id="screenLogin">
+  <div class="login-inner">
+    <!-- Brand -->
+    <div style="text-align:center;margin-bottom:1.75rem">
+      <div style="font-size:3rem;line-height:1">⚡🤖</div>
+      <div style="font-size:1.25rem;font-weight:900;color:#1d4ed8;letter-spacing:1px;margin-top:0.5rem">
+        ELECTRIC &amp; AUTOMATION
+      </div>
+      <div style="font-size:0.7rem;color:#64748b;letter-spacing:3px;text-transform:uppercase;margin-top:2px">
+        JOSE NAVARRO
+      </div>
+      <div style="width:50px;height:3px;background:linear-gradient(90deg,#1d4ed8,#60a5fa);
+                  border-radius:2px;margin:0.625rem auto"></div>
+      <div style="font-size:0.75rem;color:#64748b">📋 Sistema de Registro · Impulsadoras</div>
+    </div>
+
+    <!-- Login box -->
+    <div class="login-box">
+      <h2 style="font-size:1rem;font-weight:700;color:#1a202c;margin-bottom:1.25rem;text-align:center">
+        👤 Iniciar Sesión
+      </h2>
+
+      <div class="form-group">
+        <label class="form-label">Usuario</label>
+        <div class="input-wrap">
+          <span class="i-icon">👤</span>
+          <input type="text" class="form-control" id="loginUser"
+                 placeholder="Ingresa tu usuario"
+                 autocomplete="username" autocapitalize="none" spellcheck="false">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <div class="input-wrap">
+          <span class="i-icon">🔒</span>
+          <input type="password" class="form-control" id="loginPass"
+                 placeholder="Contraseña"
+                 autocomplete="current-password">
+        </div>
+      </div>
+
+      <div id="loginError" style="display:none"
+           class="alert alert-warn" style="margin:0.5rem 0">
+        ❌ Usuario o contraseña incorrectos
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:0.25rem" onclick="doLogin()">
+        🚀 Ingresar
+      </button>
+
+      <p class="text-muted text-center" style="margin-top:0.875rem;font-size:0.68rem">
+        Powered by Electric &amp; Automation
+      </p>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    ⚡ <strong>ELECTRIC &amp; AUTOMATION</strong> &nbsp;·&nbsp; JOSE NAVARRO
+  </footer>
+</div>
+
+<!-- ============================================================
+     SCREEN: USER (userall)
+     ============================================================ -->
+<div class="screen" id="screenUser">
+  <div class="app-header">
+    <div class="logo-text">⚡ ELECTRIC &amp; AUTOMATION</div>
+    <div class="subtitle">📋 Panel de Registro · Impulsadoras</div>
+  </div>
+
+  <div class="content-scroll">
+    <!-- Welcome / clock -->
+    <div style="padding:0.75rem 0.875rem 0">
+      <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);
+                  border-radius:16px;padding:1rem;">
+        <div style="font-size:0.78rem;color:#3b82f6;font-weight:700;margin-bottom:0.2rem">
+          ¡Hola! 👋
+        </div>
+        <div id="clockTime" style="font-size:1.75rem;font-weight:900;color:#1a202c;line-height:1.1"></div>
+        <div id="clockDate" style="font-size:0.72rem;color:#64748b;margin-top:3px"></div>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div style="padding:0.75rem 0.875rem 0">
+      <div class="text-muted text-center"
+           style="margin-bottom:0.625rem;font-weight:600;font-size:0.75rem">
+        Selecciona el tipo de registro 👇
+      </div>
+      <div class="flex-row">
+        <button class="opt-btn ob-entrada" onclick="selectTipo('entrada')">
+          <span class="ob-icon">🌅</span>
+          <span class="ob-label">ENTRADA</span>
+          <span class="ob-sub">Inicio de jornada</span>
+          <span style="background:rgba(255,255,255,0.22);padding:0.15rem 0.6rem;
+                        border-radius:10px;font-size:0.68rem;margin-top:0.25rem">
+            ⏰ 9:00 AM
+          </span>
+        </button>
+        <button class="opt-btn ob-salida" onclick="selectTipo('salida')">
+          <span class="ob-icon">🌆</span>
+          <span class="ob-label">SALIDA</span>
+          <span class="ob-sub">Fin de jornada</span>
+          <span style="background:rgba(255,255,255,0.22);padding:0.15rem 0.6rem;
+                        border-radius:10px;font-size:0.68rem;margin-top:0.25rem">
+            ⏰ 7:00 PM
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="alert alert-info" style="margin-top:0.75rem">
+      ℹ️ Registra tu <strong>entrada</strong> entre 8:50–9:10 AM y tu
+      <strong>salida</strong> entre 6:50–7:10 PM
+    </div>
+  </div>
+
+  <div style="padding:0.625rem 0.875rem;border-top:2px solid #e2e8f0;flex-shrink:0;background:white">
+    <button class="btn btn-danger" onclick="doLogout()"
+            style="background:#fff1f2;color:#dc2626;border:2px solid #fecaca;font-size:0.85rem">
+      🚪 Cerrar Sesión
+    </button>
+  </div>
+  <footer class="app-footer">
+    ⚡ <strong>ELECTRIC &amp; AUTOMATION</strong> &nbsp;·&nbsp; JOSE NAVARRO
+  </footer>
+</div>
+
+<!-- ============================================================
+     SCREEN: FORM (entrada / salida)
+     ============================================================ -->
+<div class="screen" id="screenForm">
+  <div class="app-header" id="formHeader">
+    <div class="logo-text" id="formTitle">📝 Registro</div>
+    <div class="subtitle" id="formSubtitle"></div>
+  </div>
+
+  <div class="content-scroll">
+    <!-- Time indicator -->
+    <div id="timeIndicator" style="margin:0.625rem 0.875rem;padding:0.875rem;
+                                    border-radius:12px;text-align:center"></div>
+
+    <!-- Personal data -->
+    <div class="card">
+      <div class="card-title">👤 Datos Personales</div>
+
+      <div class="form-group">
+        <label class="form-label">🪪 Cédula *</label>
+        <input type="text" inputmode="numeric" class="form-control" id="formCedula"
+               placeholder="Número de cédula" maxlength="15"
+               oninput="onCedulaChange(this.value)">
+        <div id="cedulaSuggest" class="suggest-box"></div>
+      </div>
+
+      <div class="flex-row">
+        <div class="form-group flex-1">
+          <label class="form-label">Nombre *</label>
+          <input type="text" class="form-control" id="formNombre"
+                 placeholder="Nombre" autocapitalize="words">
+        </div>
+        <div class="form-group flex-1">
+          <label class="form-label">Apellido *</label>
+          <input type="text" class="form-control" id="formApellido"
+                 placeholder="Apellido" autocapitalize="words">
+        </div>
+      </div>
+    </div>
+
+    <!-- Work data -->
+    <div class="card">
+      <div class="card-title">💼 Trabajo</div>
+
+      <div class="form-group">
+        <label class="form-label">📝 Descripción *</label>
+        <textarea class="form-control" id="formDesc" rows="3"
+                  placeholder="Describe el trabajo realizado…"
+                  style="resize:none"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">💵 Valor (USD) *</label>
+        <div class="input-wrap">
+          <span class="i-icon">$</span>
+          <input type="number" class="form-control" id="formValor"
+                 placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+
+    <!-- Photos -->
+    <div class="card">
+      <div class="card-title">📸 Fotos <span style="font-weight:400;color:#94a3b8">(máx. 2)</span></div>
+      <p class="text-muted" style="margin-bottom:0.5rem;font-size:0.75rem">
+        Adjunta evidencia fotográfica de tu trabajo
+      </p>
+      <!-- Info compresión -->
+      <div style="background:#eff6ff;border-radius:8px;padding:0.5rem 0.75rem;
+                  margin-bottom:0.75rem;font-size:0.72rem;color:#1e40af;display:flex;
+                  align-items:center;gap:0.4rem">
+        🗜️ <span>Las fotos se comprimen automáticamente antes de subir para ahorrar espacio</span>
+      </div>
+      <input type="file" id="formFotos" accept="image/*" multiple style="display:none"
+             onchange="previewPhotos(this)">
+      <div id="photoPreview" class="photo-grid" style="margin-bottom:0.75rem;min-height:10px"></div>
+      <!-- Info tamaño -->
+      <div id="photoSizeInfo" style="font-size:0.7rem;color:#64748b;margin-bottom:0.5rem;display:none"></div>
+      <button class="btn btn-outline" onclick="document.getElementById('formFotos').click()">
+        📷 Seleccionar Fotos
+      </button>
+    </div>
+
+    <!-- Warning for duplicate -->
+    <div id="dupWarn" class="alert alert-warn" style="display:none"></div>
+
+    <!-- Submit -->
+    <div style="padding:0 0.875rem 1rem">
+      <button class="btn btn-success btn-lg" onclick="submitForm()">
+        ✅ Guardar Registro
+      </button>
+      <button class="btn btn-secondary" style="margin-top:0.5rem" onclick="backToUser()">
+        ← Volver
+      </button>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    ⚡ <strong>ELECTRIC &amp; AUTOMATION</strong> &nbsp;·&nbsp; JOSE NAVARRO
+  </footer>
+</div>
+
+<!-- ============================================================
+     SCREEN: ADMIN
+     ============================================================ -->
+<div class="screen" id="screenAdmin">
+  <div class="app-header">
+    <div class="logo-text">⚡ ELECTRIC &amp; AUTOMATION</div>
+    <div class="subtitle">🛡️ Panel Administrador</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-search" onclick="adminTab('search')">🔍 Búsqueda</button>
+    <button class="tab-btn" id="tab-export" onclick="adminTab('export')">📊 Excel</button>
+    <button class="tab-btn" id="tab-config" onclick="adminTab('config')">⚙️ Config</button>
+  </div>
+
+  <!-- Tab: Search -->
+  <div id="tabSearch" class="content-scroll">
+    <div class="card" style="padding:1rem">
+      <div style="margin-bottom:0.625rem">
+        <div class="flex-row">
+          <input type="text" inputmode="numeric" class="form-control flex-1"
+                 id="adminCedula" placeholder="🪪 Escribe cédula o nombre…"
+                 maxlength="15" autocomplete="off"
+                 oninput="onAdminCedulaInput(this.value)"
+                 onkeydown="if(event.key==='Enter') adminSearch()">
+          <button class="btn btn-primary" style="width:auto;padding:0 1rem"
+                  onclick="adminSearch()">🔍</button>
+        </div>
+        <!-- Sugerencias de personas -->
+        <div id="adminSuggestBox" style="
+          display:none;background:white;
+          border:2px solid #3b82f6;border-top:none;
+          border-radius:0 0 12px 12px;
+          max-height:200px;overflow-y:auto;
+          box-shadow:0 6px 16px rgba(59,130,246,0.15);
+          position:relative;z-index:100;">
+        </div>
+      </div>
+      <!-- Date filters -->
+      <div class="flex-row">
+        <div class="flex-1">
+          <label class="form-label">Desde</label>
+          <input type="date" class="form-control" id="filterFrom" style="font-size:0.78rem">
+        </div>
+        <div class="flex-1">
+          <label class="form-label">Hasta</label>
+          <input type="date" class="form-control" id="filterTo" style="font-size:0.78rem">
+        </div>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:0.625rem;font-size:0.8rem"
+              onclick="adminSearch()">🔄 Buscar / Actualizar</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="adminStats" style="display:none">
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+
+    <!-- Person header -->
+    <div id="personHeader" style="display:none;padding:0 0.875rem 0.2rem">
+      <div style="font-size:0.85rem;font-weight:800;color:#1a202c" id="personName"></div>
+      <div class="text-muted" id="personCedula"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="searchResults" style="padding:0 0.875rem 1rem"></div>
+  </div>
+
+  <!-- Tab: Export -->
+  <div id="tabExport" class="content-scroll" style="display:none">
+    <div class="card">
+      <div class="card-title">📊 Exportar a Excel</div>
+
+      <div class="form-group">
+        <label class="form-label">🪪 Cédula (vacío = todas)</label>
+        <input type="text" inputmode="numeric" class="form-control"
+               id="expCedula" placeholder="Opcional">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">📅 Período</label>
+        <select class="form-control" id="expPeriod" onchange="periodChange()">
+          <option value="week">Esta semana</option>
+          <option value="biweek">Quincena actual</option>
+          <option value="month">Este mes</option>
+          <option value="custom">Rango personalizado</option>
+        </select>
+      </div>
+
+      <div id="customDates" style="display:none">
+        <div class="flex-row" style="margin-bottom:0.875rem">
+          <div class="flex-1">
+            <label class="form-label">Desde</label>
+            <input type="date" class="form-control" id="expFrom" style="font-size:0.78rem">
+          </div>
+          <div class="flex-1">
+            <label class="form-label">Hasta</label>
+            <input type="date" class="form-control" id="expTo" style="font-size:0.78rem">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-success" onclick="exportExcel()">
+        📥 Descargar Excel
+      </button>
+    </div>
+
+    <!-- Recent all -->
+    <div class="card">
+      <div class="card-title">🕐 Últimos registros del sistema</div>
+      <button class="btn btn-outline" onclick="loadRecent()" style="font-size:0.82rem">
+        🔄 Cargar últimos 20
+      </button>
+      <div id="recentList" style="margin-top:0.75rem"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Config -->
+  <div id="tabConfig" class="content-scroll" style="display:none">
+    <!-- Change admin password -->
+    <div class="card">
+      <div class="card-title">🔐 Cambiar Contraseñas</div>
+
+      <div class="pass-section">
+        <div style="font-size:0.82rem;font-weight:700;color:#1d4ed8;margin-bottom:0.75rem">
+          👑 Administrador
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nueva contraseña</label>
+          <input type="password" class="form-control" id="newAdminPass"
+                 placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-group" style="margin-bottom:0.625rem">
+          <label class="form-label">Confirmar</label>
+          <input type="password" class="form-control" id="confAdminPass"
+                 placeholder="Repite la contraseña">
+        </div>
+        <button class="btn btn-primary" style="font-size:0.82rem"
+                onclick="changePass('admin')">💾 Actualizar Admin</button>
+      </div>
+
+      <div class="pass-section">
+        <div style="font-size:0.82rem;font-weight:700;color:#7c3aed;margin-bottom:0.75rem">
+          👤 Usuario Común (userall)
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nueva contraseña</label>
+          <input type="password" class="form-control" id="newUserPass"
+                 placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-group" style="margin-bottom:0.625rem">
+          <label class="form-label">Confirmar</label>
+          <input type="password" class="form-control" id="confUserPass"
+                 placeholder="Repite la contraseña">
+        </div>
+        <button class="btn btn-purple" style="font-size:0.82rem"
+                onclick="changePass('userall')">💾 Actualizar Usuario</button>
+      </div>
+    </div>
+
+    <!-- Delete user -->
+    <div class="card" style="border:2px solid #fee2e2">
+      <div class="card-title" style="color:#dc2626">🚫 Eliminar Usuario y Registros</div>
+      <p class="text-muted" style="margin-bottom:0.875rem;line-height:1.5">
+        Ingresa la cédula del usuario para <strong>eliminar todos sus registros</strong>
+        (fotos incluidas) de la base de datos. Esta acción <strong>no se puede deshacer</strong>.
+      </p>
+
+      <!-- Buscar por cédula -->
+      <div class="form-group">
+        <label class="form-label">🪪 Cédula del usuario</label>
+        <input type="text" inputmode="numeric" class="form-control"
+               id="delCedula" placeholder="Número de cédula" maxlength="15"
+               oninput="onDelCedulaInput(this.value)">
+      </div>
+
+      <!-- Preview del usuario encontrado -->
+      <div id="delUserPreview" style="display:none;background:#fef2f2;border-radius:10px;
+           padding:0.75rem;margin-bottom:0.875rem;border-left:4px solid #ef4444">
+        <div style="font-size:0.82rem;font-weight:700;color:#991b1b" id="delUserName"></div>
+        <div style="font-size:0.72rem;color:#dc2626;margin-top:3px" id="delUserStats"></div>
+      </div>
+
+      <!-- Confirmación -->
+      <div id="delConfirmBox" style="display:none;background:#fff7ed;border-radius:10px;
+           padding:0.75rem;margin-bottom:0.875rem;border-left:4px solid #f97316">
+        <div style="font-size:0.78rem;color:#9a3412;font-weight:600;margin-bottom:0.5rem">
+          ⚠️ ¿Estás segura de que deseas eliminar todo?
+        </div>
+        <div style="font-size:0.72rem;color:#9a3412;margin-bottom:0.75rem">
+          Se eliminarán todos los registros y fotos de este usuario permanentemente.
+        </div>
+        <div class="flex-row">
+          <button class="btn btn-secondary flex-1" style="font-size:0.8rem"
+                  onclick="cancelDelete()">✕ Cancelar</button>
+          <button class="btn btn-danger flex-1" style="font-size:0.8rem"
+                  onclick="confirmDelete()">🗑️ Sí, eliminar todo</button>
+        </div>
+      </div>
+
+      <button class="btn btn-danger" id="delSearchBtn"
+              onclick="searchUserToDelete()" style="font-size:0.85rem">
+        🔍 Buscar y verificar usuario
+      </button>
+    </div>
+
+    <!-- Cleanup -->
+    <div class="card">
+      <div class="card-title">🗑️ Mantenimiento de Fotos</div>
+      <p class="text-muted" style="margin-bottom:0.875rem;line-height:1.5">
+        Las fotos se eliminan automáticamente a los <strong>30 días</strong>,
+        empezando por el día más antiguo. Puedes ejecutarlo manualmente aquí.
+      </p>
+      <button class="btn btn-warning" onclick="runCleanup()">
+        🧹 Limpiar fotos antiguas
+      </button>
+      <div id="cleanupResult" style="margin-top:0.625rem"></div>
+    </div>
+  </div>
+
+  <div style="padding:0.625rem 0.875rem;border-top:1px solid #e2e8f0;flex-shrink:0">
+    <button class="btn btn-secondary" onclick="doLogout()">🚪 Cerrar Sesión</button>
+  </div>
+  <footer class="app-footer">
+    ⚡ <strong>ELECTRIC &amp; AUTOMATION</strong> &nbsp;·&nbsp; JOSE NAVARRO
+  </footer>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ============================================================
+//  ██████╗  ██████╗ ███╗  ██╗███████╗██╗ ██████╗
+//  ██╔════╝██╔═══██╗████╗ ██║██╔════╝██║██╔════╝
+//  ██║     ██║   ██║██╔██╗██║█████╗  ██║██║  ███╗
+//  ██║     ██║   ██║██║╚████║██╔══╝  ██║██║   ██║
+//  ╚██████╗╚██████╔╝██║ ╚███║██║     ██║╚██████╔╝
+//   ╚═════╝ ╚═════╝ ╚═╝  ╚══╝╚═╝     ╚═╝ ╚═════╝
+//
+//  ⚡ ELECTRIC & AUTOMATION — Sistema de Registro
+//  ============================================================
+//  PASO 1: Reemplaza los valores de FIREBASE CONFIG con los
+//  de tu proyecto en https://console.firebase.google.com
+//  ============================================================
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyAFtJVSlU45f3XbNbiTp3J_uBvAk_GfMZY",
+  authDomain:        "registro-impulsadoras.firebaseapp.com",
+  projectId:         "registro-impulsadoras",
+  storageBucket:     "registro-impulsadoras.firebasestorage.app",
+  messagingSenderId: "711875456467",
+  appId:             "1:711875456467:web:3cdfa628d11a1ffc5e9326",
+  measurementId:     "G-5Q0FF7418N"
+};
+
+// ─── Firebase ya configurado ─────────────────────────────────
+const CONFIGURED = true;
+
+let db, storage;
+if (CONFIGURED) {
+  firebase.initializeApp(firebaseConfig);
+  db      = firebase.firestore();
+  storage = firebase.storage();
+} else {
+  showScreen('screenSetup');
+}
+
+// ============================================================
+//  ESTADO GLOBAL
+// ============================================================
+let currentUser  = null;   // 'admin' | 'userall'
+let currentTipo  = null;   // 'entrada' | 'salida'
+let selectedFiles = [];    // archivos de foto seleccionados
+let credsCache   = null;   // cache de credenciales desde Firestore
+let clockTimer   = null;
+
+// ============================================================
+//  UTILIDADES DE UI
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function loading(msg = 'Cargando…') {
+  document.getElementById('loadingText').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoad() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+let toastTimer;
+function toast(msg, type = '', ms = 3500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('show');
+  }, ms);
+}
+
+function titleCase(str) {
+  if (!str) return '';
+  return str.trim().toLowerCase()
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function fmtTime(d) {
+  return d.toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+}
+function fmtDate(d) {
+  return d.toLocaleDateString('es-EC', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+function fmtDateShort(d) {
+  return d.toLocaleDateString('es-EC', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+function isoDate(d) {
+  return d.toISOString().split('T')[0];
+}
+
+// ============================================================
+//  IMAGEN PREVIEW MODAL
+// ============================================================
+function openImg(url) {
+  document.getElementById('imgModalImg').src = url;
+  document.getElementById('imgModalDown').href = url;
+  document.getElementById('imgModal').classList.add('active');
+}
+function closeImgModal() {
+  document.getElementById('imgModal').classList.remove('active');
+}
+
+// ============================================================
+//  CREDENCIALES (Firestore)
+// ============================================================
+async function getCreds() {
+  if (credsCache) return credsCache;
+  try {
+    const snap = await db.collection('config').doc('credentials').get();
+    if (snap.exists) {
+      credsCache = snap.data();
+    } else {
+      credsCache = { admin: 'Mari2025', userall: 'Abc1234' };
+      await db.collection('config').doc('credentials').set(credsCache);
+    }
+  } catch {
+    credsCache = { admin: 'Mari2025', userall: 'Abc1234' };
+  }
+  return credsCache;
+}
+
+// ============================================================
+//  AUTENTICACIÓN
+// ============================================================
+async function doLogin() {
+  const user = (document.getElementById('loginUser').value || '').trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value || '';
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  if (!user || !pass) { toast('⚠️ Completa todos los campos', 'warn'); return; }
+
+  loading('Verificando…');
+  try {
+    const creds = await getCreds();
+    if (user === 'admin' && pass === creds.admin) {
+      currentUser = 'admin';
+      hideLoad();
+      toast('✅ Bienvenido, Administrador', 'ok');
+      silentCleanup();
+      initAdminDefaults();
+      onLoginSuccess();
+      showScreen('screenAdmin');
+    } else if (user === 'userall' && pass === creds.userall) {
+      currentUser = 'userall';
+      hideLoad();
+      toast('✅ ¡Bienvenido!', 'ok');
+      startClock();
+      onLoginSuccess();
+      showScreen('screenUser');
+    } else {
+      hideLoad();
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error de conexión: ' + e.message, 'err', 5000);
+  }
+}
+
+function doLogout() {
+  onLogoutCleanup();
+  currentUser = null;
+  currentTipo = null;
+  selectedFiles = [];
+  stopClock();
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  showScreen('screenLogin');
+}
+
+async function changePass(account) {
+  const np  = document.getElementById(account === 'admin' ? 'newAdminPass' : 'newUserPass').value;
+  const cp  = document.getElementById(account === 'admin' ? 'confAdminPass' : 'confUserPass').value;
+
+  if (!np || !cp)    { toast('⚠️ Completa los campos', 'warn'); return; }
+  if (np !== cp)     { toast('❌ Las contraseñas no coinciden', 'err'); return; }
+  if (np.length < 6) { toast('⚠️ Mínimo 6 caracteres', 'warn'); return; }
+
+  loading('Actualizando contraseña…');
+  try {
+    await db.collection('config').doc('credentials').set(
+      { [account]: np }, { merge: true }
+    );
+    credsCache = null;
+    hideLoad();
+    document.getElementById(account === 'admin' ? 'newAdminPass' : 'newUserPass').value = '';
+    document.getElementById(account === 'admin' ? 'confAdminPass' : 'confUserPass').value = '';
+    toast(`✅ Contraseña de ${account} actualizada`, 'ok');
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+//  RELOJ (pantalla userall)
+// ============================================================
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('clockTime').textContent = fmtTime(now);
+    document.getElementById('clockDate').textContent = fmtDate(now);
+    clockTimer = setTimeout(tick, 1000);
+  }
+  stopClock();
+  tick();
+}
+function stopClock() {
+  if (clockTimer) { clearTimeout(clockTimer); clockTimer = null; }
+}
+
+// ============================================================
+//  REGISTRO: SELECCIÓN DE TIPO
+// ============================================================
+function selectTipo(tipo) {
+  currentTipo = tipo;
+  stopClock();
+
+  const now   = new Date();
+  const totalMin = now.getHours() * 60 + now.getMinutes();
+  const target   = tipo === 'entrada' ? 9 * 60 : 19 * 60;
+  const diff     = totalMin - target;
+  const abs      = Math.abs(diff);
+
+  let indStyle, indHtml;
+  if (abs <= 10) {
+    indStyle = 'background:#dcfce7;color:#166534';
+    indHtml  = `<div style="font-size:1.5rem">✅</div>
+                <div style="font-weight:800;font-size:1.1rem">${fmtTime(now)}</div>
+                <div style="font-size:0.78rem;margin-top:3px">¡Puntual! ${diff >= 0 ? '+' : ''}${diff} min</div>`;
+  } else if (diff > 0) {
+    indStyle = 'background:#fee2e2;color:#991b1b';
+    indHtml  = `<div style="font-size:1.5rem">⏰</div>
+                <div style="font-weight:800;font-size:1.1rem">${fmtTime(now)}</div>
+                <div style="font-size:0.78rem;margin-top:3px">Tarde ${abs} minutos</div>`;
+  } else {
+    indStyle = 'background:#fef3c7;color:#92400e';
+    indHtml  = `<div style="font-size:1.5rem">⏰</div>
+                <div style="font-weight:800;font-size:1.1rem">${fmtTime(now)}</div>
+                <div style="font-size:0.78rem;margin-top:3px">Temprano ${abs} minutos</div>`;
+  }
+
+  const ind = document.getElementById('timeIndicator');
+  ind.style.cssText = indStyle + ';border-radius:12px;padding:0.875rem;text-align:center';
+  ind.innerHTML = indHtml +
+    `<div style="font-size:0.7rem;opacity:0.75;margin-top:3px">
+       Horario objetivo: ${tipo === 'entrada' ? '9:00 AM' : '7:00 PM'}
+     </div>`;
+
+  const isE = tipo === 'entrada';
+  document.getElementById('formTitle').textContent    = isE ? '🌅 Registro de Entrada' : '🌆 Registro de Salida';
+  document.getElementById('formSubtitle').textContent = fmtDate(now);
+
+  // Reset form
+  ['formCedula','formNombre','formApellido','formDesc','formValor'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('formFotos').value = '';
+  document.getElementById('photoPreview').innerHTML = '';
+  document.getElementById('dupWarn').style.display = 'none';
+  document.getElementById('cedulaSuggest').style.display = 'none';
+  selectedFiles = [];
+
+  showScreen('screenForm');
+}
+
+function backToUser() {
+  stopClock();
+  startClock();
+  showScreen('screenUser');
+}
+
+// ============================================================
+//  CÉDULA: AUTOCOMPLETE
+// ============================================================
+let cedulaTimer;
+async function onCedulaChange(val) {
+  clearTimeout(cedulaTimer);
+  document.getElementById('cedulaSuggest').style.display = 'none';
+  if (val.length < 6) return;
+  cedulaTimer = setTimeout(() => lookupCedula(val), 600);
+}
+
+async function lookupCedula(cedula) {
+  try {
+    const snap = await db.collection('registros')
+      .where('cedula', '==', cedula)
+      .limit(3)
+      .get();
+    if (!snap.empty) {
+      const d = snap.docs[0].data();
+      const nombre   = titleCase(d.nombre);
+      const apellido = titleCase(d.apellido);
+
+      // Auto-fill
+      document.getElementById('formNombre').value   = nombre;
+      document.getElementById('formApellido').value = apellido;
+
+      const box = document.getElementById('cedulaSuggest');
+      box.innerHTML = `<div class="suggest-item" onclick="useSuggest('${nombre}','${apellido}')">
+        👤 ${nombre} ${apellido}
+        <span style="color:#94a3b8;font-size:0.7rem;margin-left:0.4rem">· encontrado en historial</span>
+      </div>`;
+      box.style.display = 'block';
+      toast(`✅ Datos completados desde historial`, 'ok', 2000);
+    } else {
+      document.getElementById('cedulaSuggest').style.display = 'none';
+    }
+  } catch { /* silencioso */ }
+}
+
+function useSuggest(nombre, apellido) {
+  document.getElementById('formNombre').value   = nombre;
+  document.getElementById('formApellido').value = apellido;
+  document.getElementById('cedulaSuggest').style.display = 'none';
+}
+
+// ============================================================
+//  FOTOS: PREVIEW
+// ============================================================
+// ============================================================
+//  COMPRESIÓN DE IMÁGENES (Canvas API — sin librerías externas)
+//  • Máx. 1280px en el lado más largo (mantiene aspecto)
+//  • Calidad JPEG: 82% — excelente visual, ~70-80% menos peso
+//  • Si la foto ya es pequeña (<300KB) se usa sin comprimir
+// ============================================================
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const MAX_SIDE = 1280;   // px máximo en cualquier lado
+    const QUALITY  = 0.82;   // 82% calidad JPEG
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Si la imagen es pequeña, no comprimir
+        if (file.size < 300 * 1024 && img.width <= MAX_SIDE && img.height <= MAX_SIDE) {
+          resolve({ blob: file, dataUrl: e.target.result, originalKB: file.size / 1024, compressedKB: file.size / 1024, compressed: false });
+          return;
+        }
+
+        // Calcular nuevas dimensiones manteniendo proporción
+        let w = img.width;
+        let h = img.height;
+        if (w > h && w > MAX_SIDE) { h = Math.round(h * MAX_SIDE / w); w = MAX_SIDE; }
+        else if (h > MAX_SIDE)     { w = Math.round(w * MAX_SIDE / h); h = MAX_SIDE; }
+
+        // Dibujar en canvas y comprimir
+        const canvas  = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        canvas.toBlob((blob) => {
+          const reader2 = new FileReader();
+          reader2.onload = (e2) => {
+            resolve({
+              blob,
+              dataUrl:       e2.target.result,
+              originalKB:    Math.round(file.size / 1024),
+              compressedKB:  Math.round(blob.size / 1024),
+              compressed:    true
+            });
+          };
+          reader2.readAsDataURL(blob);
+        }, 'image/jpeg', QUALITY);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Preview con compresión ────────────────────────────────────
+async function previewPhotos(input) {
+  const files = Array.from(input.files).slice(0, 2);
+  if (!files.length) return;
+
+  const area     = document.getElementById('photoPreview');
+  const sizeInfo = document.getElementById('photoSizeInfo');
+  area.innerHTML = '';
+  sizeInfo.style.display = 'none';
+  selectedFiles = [];   // se llenará con blobs comprimidos
+
+  toast('🗜️ Procesando fotos…', '', 2500);
+
+  let infoLines = [];
+
+  for (const f of files) {
+    const result = await compressImage(f);
+    selectedFiles.push(result.blob);   // guardar blob comprimido
+
+    // Thumbnail
+    const img = document.createElement('img');
+    img.src       = result.dataUrl;
+    img.className = 'photo-thumb';
+    img.onclick   = () => openImg(result.dataUrl);
+    area.appendChild(img);
+
+    // Info de tamaño
+    if (result.compressed) {
+      const pct = Math.round((1 - result.compressedKB / result.originalKB) * 100);
+      infoLines.push(`📷 ${result.originalKB} KB → ${result.compressedKB} KB (−${pct}%)`);
+    } else {
+      infoLines.push(`📷 ${result.compressedKB} KB (sin comprimir, ya era pequeña)`);
+    }
+  }
+
+  sizeInfo.innerHTML = infoLines.join('<br>');
+  sizeInfo.style.display = 'block';
+  toast(`✅ ${files.length} foto(s) lista(s)`, 'ok', 2500);
+}
+
+// ============================================================
+//  GUARDAR REGISTRO
+// ============================================================
+async function submitForm() {
+  const cedula   = (document.getElementById('formCedula').value || '').trim();
+  const nombre   = (document.getElementById('formNombre').value || '').trim();
+  const apellido = (document.getElementById('formApellido').value || '').trim();
+  const desc     = (document.getElementById('formDesc').value || '').trim();
+  const valor    = parseFloat(document.getElementById('formValor').value);
+
+  if (!cedula || !nombre || !apellido || !desc || isNaN(valor) || valor < 0) {
+    toast('⚠️ Completa todos los campos obligatorios', 'warn'); return;
+  }
+  if (cedula.length < 5) { toast('⚠️ Cédula inválida', 'warn'); return; }
+
+  const now      = new Date();
+  const totalMin = now.getHours() * 60 + now.getMinutes();
+  const target   = currentTipo === 'entrada' ? 9 * 60 : 19 * 60;
+  const diffMin  = totalMin - target;
+  const onTime   = Math.abs(diffMin) <= 10;
+
+  loading('Guardando registro… 💾');
+  try {
+    // ── Revisar si ya existe un registro del mismo tipo hoy ──
+    // (filtro por cédula únicamente para evitar índices compuestos,
+    //  luego se filtra tipo y fecha en el cliente)
+    const todayISO = isoDate(now);
+    const dupSnap  = await db.collection('registros')
+      .where('cedula', '==', cedula)
+      .get();
+
+    const yaExiste = dupSnap.docs.some(d => {
+      const r = d.data();
+      return r.tipo === currentTipo && r.fechaISO === todayISO;
+    });
+
+    if (yaExiste) {
+      hideLoad();
+      const w = document.getElementById('dupWarn');
+      w.textContent = `⚠️ Ya existe un registro de ${currentTipo} para esta cédula hoy.`;
+      w.style.display = 'block';
+      toast(`⚠️ Ya registraste ${currentTipo} hoy`, 'warn', 5000);
+      return;
+    }
+
+    // ── Subir fotos a Storage (ya vienen comprimidas) ────────
+    const fotos = [];
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const blob = selectedFiles[i];
+      // Siempre subimos como JPEG (resultado de la compresión)
+      const path = `fotos/${cedula}/${now.getTime()}_${i}.jpg`;
+      const ref  = storage.ref(path);
+      const meta = { contentType: 'image/jpeg' };
+      await ref.put(blob, meta);
+      const url  = await ref.getDownloadURL();
+      fotos.push({ url, path });
+    }
+
+    // ── Guardar en Firestore ─────────────────────────────────
+    const record = {
+      cedula,
+      nombre:         titleCase(nombre),
+      apellido:       titleCase(apellido),
+      nombreCompleto: `${titleCase(nombre)} ${titleCase(apellido)}`,
+      descripcion:    desc,
+      valor,
+      tipo:           currentTipo,
+      timestamp:      firebase.firestore.Timestamp.now(),
+      horaLocal:      fmtTime(now),
+      fechaLocal:     fmtDate(now),
+      fechaISO:       isoDate(now),
+      diferenciaMin:  diffMin,
+      enHorario:      onTime,
+      fotos,
+      creadoEn:       firebase.firestore.Timestamp.now()
+    };
+
+    await db.collection('registros').add(record);
+    invalidatePersonasCache(); // refrescar autocomplete del admin
+    hideLoad();
+
+    const status = onTime
+      ? '✅ Puntual'
+      : (diffMin > 0 ? `⏰ Tarde ${Math.abs(diffMin)} min` : `⏰ Temprano ${Math.abs(diffMin)} min`);
+
+    toast(`✅ Registro guardado · ${status}`, 'ok', 4000);
+    setTimeout(() => { stopClock(); startClock(); showScreen('screenUser'); }, 1500);
+
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error: ' + e.message, 'err', 6000);
+    console.error(e);
+  }
+}
+
+// ============================================================
+//  ADMIN: AUTOCOMPLETE DE CÉDULA
+//  Desde 3 dígitos muestra personas registradas que coincidan
+// ============================================================
+let adminSuggestTimer;
+// Cache local de personas únicas para no repetir consultas
+let personasCache = null;
+
+async function loadPersonasCache() {
+  if (personasCache) return personasCache;
+  try {
+    const snap = await db.collection('registros').get();
+    const map  = {};
+    snap.docs.forEach(d => {
+      const r = d.data();
+      if (!r.cedula) return;
+      if (!map[r.cedula]) {
+        map[r.cedula] = {
+          cedula:  r.cedula,
+          nombre:  titleCase(r.nombre  || ''),
+          apellido:titleCase(r.apellido || ''),
+          count:   0
+        };
+      }
+      map[r.cedula].count++;
+      // Actualizar nombre si viene en título case mejor
+      if (r.nombreCompleto) {
+        map[r.cedula].nombre   = titleCase(r.nombre   || map[r.cedula].nombre);
+        map[r.cedula].apellido = titleCase(r.apellido || map[r.cedula].apellido);
+      }
+    });
+    personasCache = Object.values(map);
+    return personasCache;
+  } catch {
+    return [];
+  }
+}
+
+// Invalidar cache cuando se guarda un nuevo registro o se elimina uno
+function invalidatePersonasCache() { personasCache = null; }
+
+function onAdminCedulaInput(val) {
+  clearTimeout(adminSuggestTimer);
+  const box = document.getElementById('adminSuggestBox');
+
+  if (!val || val.length < 3) {
+    box.style.display = 'none';
+    return;
+  }
+
+  adminSuggestTimer = setTimeout(() => showAdminSuggestions(val.trim()), 350);
+}
+
+async function showAdminSuggestions(query) {
+  const box = document.getElementById('adminSuggestBox');
+  const personas = await loadPersonasCache();
+
+  // Filtrar: coincide con inicio de cédula O con nombre/apellido
+  const q = query.toLowerCase();
+  const matches = personas.filter(p =>
+    p.cedula.startsWith(q) ||
+    p.nombre.toLowerCase().includes(q) ||
+    p.apellido.toLowerCase().includes(q) ||
+    (`${p.nombre} ${p.apellido}`).toLowerCase().includes(q)
+  ).slice(0, 6); // máx. 6 sugerencias
+
+  if (!matches.length) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.innerHTML = matches.map(p => {
+    const initials = (p.nombre.charAt(0) + p.apellido.charAt(0)).toUpperCase();
+    return `
+      <div class="admin-suggest-item" onclick="selectAdminSuggest('${p.cedula}')">
+        <div class="asi-avatar">${initials}</div>
+        <div class="asi-info">
+          <div class="asi-name">👤 ${p.nombre} ${p.apellido}</div>
+          <div class="asi-ced">🪪 ${p.cedula}</div>
+        </div>
+        <div class="asi-badge">${p.count} reg.</div>
+      </div>`;
+  }).join('');
+
+  box.style.display = 'block';
+}
+
+function selectAdminSuggest(cedula) {
+  document.getElementById('adminCedula').value = cedula;
+  document.getElementById('adminSuggestBox').style.display = 'none';
+  adminSearch(); // buscar inmediatamente al seleccionar
+}
+
+// Cerrar sugerencias al tocar fuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('#adminSuggestBox') &&
+      e.target.id !== 'adminCedula') {
+    const box = document.getElementById('adminSuggestBox');
+    if (box) box.style.display = 'none';
+  }
+});
+
+// ============================================================
+//  ADMIN: BÚSQUEDA POR CÉDULA
+// ============================================================
+async function adminSearch() {
+  const cedula  = (document.getElementById('adminCedula').value || '').trim();
+  const fromVal = document.getElementById('filterFrom').value;
+  const toVal   = document.getElementById('filterTo').value;
+
+  if (!cedula) { toast('⚠️ Ingresa una cédula', 'warn'); return; }
+
+  loading('Buscando registros…');
+  try {
+    const snap = await db.collection('registros')
+      .where('cedula', '==', cedula)
+      .get();
+
+    hideLoad();
+
+    let records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Filtrar por fecha (client-side para evitar índices compuestos)
+    if (fromVal) {
+      const from = new Date(fromVal + 'T00:00:00');
+      records = records.filter(r => {
+        const ts = r.timestamp?.seconds ? new Date(r.timestamp.seconds * 1000) : null;
+        return ts && ts >= from;
+      });
+    }
+    if (toVal) {
+      const to = new Date(toVal + 'T23:59:59');
+      records = records.filter(r => {
+        const ts = r.timestamp?.seconds ? new Date(r.timestamp.seconds * 1000) : null;
+        return ts && ts <= to;
+      });
+    }
+
+    // Ordenar por timestamp desc
+    records.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+    if (records.length === 0) {
+      document.getElementById('adminStats').style.display = 'none';
+      document.getElementById('personHeader').style.display = 'none';
+      document.getElementById('searchResults').innerHTML =
+        `<div class="empty-state">
+           <div class="es-icon">🔍</div>
+           <div class="es-txt">No se encontraron registros para cédula <strong>${cedula}</strong></div>
+         </div>`;
+      return;
+    }
+
+    // ── Stats ────────────────────────────────────────────────
+    const total     = records.reduce((s, r) => s + (r.valor || 0), 0);
+    const entradas  = records.filter(r => r.tipo === 'entrada').length;
+    const salidas   = records.filter(r => r.tipo === 'salida').length;
+    const tardanzas = records.filter(r => r.diferenciaMin > 10).length;
+
+    document.getElementById('adminStats').style.display = 'block';
+    document.getElementById('statGrid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-val">$${total.toFixed(2)}</div>
+        <div class="stat-lbl">💵 Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${records.length}</div>
+        <div class="stat-lbl">📋 Registros</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${entradas}</div>
+        <div class="stat-lbl">🌅 Entradas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${tardanzas}</div>
+        <div class="stat-lbl">⏰ Tardanzas</div>
+      </div>
+    `;
+
+    // ── Person header ────────────────────────────────────────
+    const nombre = records[0].nombreCompleto ||
+                   `${records[0].nombre} ${records[0].apellido}`;
+    document.getElementById('personHeader').style.display = 'block';
+    document.getElementById('personName').textContent = `👤 ${nombre}`;
+    document.getElementById('personCedula').textContent =
+      `🪪 Cédula: ${cedula}  ·  ${records.length} registro(s)`;
+
+    // ── Render records ────────────────────────────────────────
+    let html = '';
+    records.forEach(r => {
+      const ts     = r.timestamp?.seconds ? new Date(r.timestamp.seconds * 1000) : new Date();
+      const diff   = r.diferenciaMin || 0;
+      const onTime = r.enHorario;
+      const badge  = onTime
+        ? `<span class="badge badge-ok">✅ Puntual</span>`
+        : (diff > 0
+            ? `<span class="badge badge-late">⏰ Tarde ${Math.abs(diff)} min</span>`
+            : `<span class="badge badge-early">⏰ Temprano ${Math.abs(diff)} min</span>`);
+
+      const fotosHtml = (r.fotos || []).map(f => `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.2rem">
+          <img src="${f.url}" class="photo-thumb" onclick="openImg('${f.url}')">
+          <a href="${f.url}" target="_blank" download
+             style="font-size:0.65rem;color:#3b82f6;text-decoration:none">⬇️ Descargar</a>
+        </div>`).join('');
+
+      html += `
+        <div class="record-card ${r.tipo} ${onTime ? 'ok' : 'late'}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem">
+            <div>
+              <div style="font-size:0.88rem;font-weight:700">
+                ${r.tipo === 'entrada' ? '🌅 Entrada' : '🌆 Salida'}
+              </div>
+              <div style="font-size:0.75rem;color:#64748b">${r.horaLocal || fmtTime(ts)}</div>
+              <div style="font-size:0.68rem;color:#94a3b8">${r.fechaLocal || fmtDate(ts)}</div>
+            </div>
+            ${badge}
+          </div>
+          <div style="font-size:0.78rem;color:#475569;margin-bottom:0.4rem;line-height:1.4">
+            📝 ${r.descripcion}
+          </div>
+          <div style="font-size:0.88rem;font-weight:800;color:#059669;margin-bottom:0.4rem">
+            💵 $${(r.valor || 0).toFixed(2)}
+          </div>
+          ${fotosHtml
+            ? `<div class="photo-grid">${fotosHtml}</div>`
+            : `<div style="font-size:0.72rem;color:#94a3b8">📷 Sin fotos adjuntas</div>`}
+        </div>`;
+    });
+
+    document.getElementById('searchResults').innerHTML = html;
+
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error en búsqueda: ' + e.message, 'err', 5000);
+    console.error(e);
+  }
+}
+
+// ============================================================
+//  ADMIN: REGISTROS RECIENTES
+// ============================================================
+async function loadRecent() {
+  loading('Cargando recientes…');
+  try {
+    const snap = await db.collection('registros')
+      .orderBy('timestamp', 'desc')
+      .limit(20)
+      .get();
+    hideLoad();
+
+    if (snap.empty) {
+      document.getElementById('recentList').innerHTML =
+        '<div class="empty-state"><div class="es-icon">📭</div><div class="es-txt">Sin registros</div></div>';
+      return;
+    }
+
+    let html = '';
+    snap.docs.forEach(d => {
+      const r  = d.data();
+      const ts = r.timestamp?.seconds ? new Date(r.timestamp.seconds * 1000) : new Date();
+      html += `
+        <div class="record-card ${r.tipo}" style="margin-bottom:0.5rem">
+          <div style="display:flex;justify-content:space-between">
+            <div>
+              <div style="font-size:0.82rem;font-weight:700">
+                ${r.nombreCompleto || (r.nombre + ' ' + r.apellido)}
+              </div>
+              <div style="font-size:0.7rem;color:#64748b">🪪 ${r.cedula}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.78rem">${r.tipo === 'entrada' ? '🌅' : '🌆'} ${r.horaLocal || ''}</div>
+              <div style="font-size:0.68rem;color:#94a3b8">${r.fechaISO || ''}</div>
+            </div>
+          </div>
+          <div style="font-size:0.82rem;font-weight:700;color:#059669;margin-top:0.3rem">
+            💵 $${(r.valor || 0).toFixed(2)}
+          </div>
+        </div>`;
+    });
+    document.getElementById('recentList').innerHTML = html;
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+//  ADMIN: EXCEL EXPORT
+// ============================================================
+function periodChange() {
+  const p = document.getElementById('expPeriod').value;
+  document.getElementById('customDates').style.display = p === 'custom' ? 'block' : 'none';
+}
+
+function getRange(period) {
+  const now = new Date();
+  let from, to;
+  to = new Date(now); to.setHours(23,59,59,999);
+
+  if (period === 'week') {
+    from = new Date(now);
+    from.setDate(now.getDate() - now.getDay());
+    from.setHours(0,0,0,0);
+  } else if (period === 'biweek') {
+    const day = now.getDate();
+    from = new Date(now.getFullYear(), now.getMonth(), day <= 15 ? 1 : 16);
+    from.setHours(0,0,0,0);
+  } else if (period === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    from.setHours(0,0,0,0);
+  } else {
+    const fs = document.getElementById('expFrom').value;
+    const ts = document.getElementById('expTo').value;
+    from = fs ? new Date(fs + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+    to   = ts ? new Date(ts + 'T23:59:59') : to;
+  }
+  return { from, to };
+}
+
+async function exportExcel() {
+  const cedula = (document.getElementById('expCedula').value || '').trim();
+  const period = document.getElementById('expPeriod').value;
+  const { from, to } = getRange(period);
+
+  loading('Generando Excel…');
+  try {
+    let snap = await db.collection('registros')
+      .where('timestamp', '>=', firebase.firestore.Timestamp.fromDate(from))
+      .where('timestamp', '<=', firebase.firestore.Timestamp.fromDate(to))
+      .get();
+
+    let records = snap.docs.map(d => d.data());
+    if (cedula) records = records.filter(r => r.cedula === cedula);
+    records.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+
+    hideLoad();
+    if (records.length === 0) { toast('⚠️ Sin datos para exportar', 'warn'); return; }
+
+    // ── Hoja de detalle ──────────────────────────────────────
+    const detalle = records.map(r => {
+      const diff = r.diferenciaMin || 0;
+      const status = r.enHorario ? 'Puntual'
+        : (diff > 0 ? `Tarde ${Math.abs(diff)} min` : `Temprano ${Math.abs(diff)} min`);
+      return {
+        'Fecha':          r.fechaISO || '',
+        'Hora':           r.horaLocal || '',
+        'Tipo':           (r.tipo || '').toUpperCase(),
+        'Nombre':         r.nombre || '',
+        'Apellido':       r.apellido || '',
+        'Cédula':         r.cedula || '',
+        'Descripción':    r.descripcion || '',
+        'Valor (USD)':    r.valor || 0,
+        'Estado Horario': status,
+        'Dif. Minutos':   diff,
+        'Fotos':          (r.fotos || []).map(f => f.url).join(' | ') || 'Sin fotos',
+      };
+    });
+
+    // ── Hoja de resumen por persona ──────────────────────────
+    const map = {};
+    records.forEach(r => {
+      if (!map[r.cedula]) map[r.cedula] = {
+        Cédula: r.cedula,
+        Nombre: r.nombreCompleto || `${r.nombre} ${r.apellido}`,
+        'Total (USD)': 0, Entradas: 0, Salidas: 0, Tardanzas: 0
+      };
+      map[r.cedula]['Total (USD)'] += r.valor || 0;
+      if (r.tipo === 'entrada') map[r.cedula].Entradas++;
+      else map[r.cedula].Salidas++;
+      if ((r.diferenciaMin || 0) > 10) map[r.cedula].Tardanzas++;
+    });
+    const resumen = Object.values(map).map(p => ({
+      ...p, 'Total (USD)': parseFloat(p['Total (USD)'].toFixed(2))
+    }));
+
+    // ── Crear libro ──────────────────────────────────────────
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(detalle);
+    ws1['!cols'] = [
+      {wch:12},{wch:12},{wch:10},{wch:18},{wch:18},
+      {wch:14},{wch:38},{wch:12},{wch:18},{wch:12},{wch:50}
+    ];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+
+    const ws2 = XLSX.utils.json_to_sheet(resumen);
+    ws2['!cols'] = [{wch:14},{wch:28},{wch:12},{wch:10},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+
+    const fname = `registros_${cedula || 'todos'}_${period}_${isoDate(new Date())}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    toast('✅ Excel descargado', 'ok');
+
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error: ' + e.message, 'err', 5000);
+    console.error(e);
+  }
+}
+
+// ============================================================
+//  LIMPIEZA DE FOTOS (30 días, día a día, más antiguos primero)
+// ============================================================
+async function silentCleanup() {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const snap = await db.collection('registros')
+      .where('creadoEn', '<', firebase.firestore.Timestamp.fromDate(cutoff))
+      .limit(30)
+      .get();
+    if (snap.empty) return;
+
+    const toProc = snap.docs
+      .filter(d => (d.data().fotos || []).length > 0)
+      .sort((a, b) => (a.data().creadoEn?.seconds || 0) - (b.data().creadoEn?.seconds || 0));
+
+    for (const doc of toProc) {
+      const r = doc.data();
+      for (const f of (r.fotos || [])) {
+        try { await storage.ref(f.path).delete(); } catch {}
+      }
+      await doc.ref.update({ fotos: [], fotosLimpiadas: true });
+    }
+  } catch { /* silencioso */ }
+}
+
+async function runCleanup() {
+  loading('Limpiando fotos antiguas…');
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const snap = await db.collection('registros')
+      .where('creadoEn', '<', firebase.firestore.Timestamp.fromDate(cutoff))
+      .get();
+
+    const toProc = snap.docs
+      .filter(d => (d.data().fotos || []).length > 0)
+      .sort((a, b) => (a.data().creadoEn?.seconds || 0) - (b.data().creadoEn?.seconds || 0));
+
+    let fCount = 0;
+    for (const doc of toProc) {
+      const r = doc.data();
+      for (const f of (r.fotos || [])) {
+        try { await storage.ref(f.path).delete(); fCount++; } catch { fCount++; }
+      }
+      await doc.ref.update({ fotos: [], fotosLimpiadas: true,
+                              limpiadas_en: firebase.firestore.Timestamp.now() });
+    }
+
+    hideLoad();
+    const res = document.getElementById('cleanupResult');
+    res.innerHTML = `<div class="alert alert-success">
+      ✅ Limpieza completa: ${fCount} foto(s) eliminada(s) de ${toProc.length} registro(s)
+    </div>`;
+    toast(`🧹 ${fCount} foto(s) eliminadas`, 'ok', 4000);
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error en limpieza: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+//  ADMIN: TABS
+// ============================================================
+function adminTab(tab) {
+  ['search','export','config'].forEach(t => {
+    document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display =
+      t === tab ? 'block' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+}
+
+// Re-map IDs (tab HTML uses tabSearch / tabExport / tabConfig)
+// but the button IDs use tab-search / tab-export / tab-config
+// — already correct in the HTML above.
+
+function initAdminDefaults() {
+  const today = isoDate(new Date());
+  const weekAgo = isoDate(new Date(Date.now() - 7*24*60*60*1000));
+  try {
+    document.getElementById('filterFrom').value = weekAgo;
+    document.getElementById('filterTo').value   = today;
+    document.getElementById('expFrom').value    = weekAgo;
+    document.getElementById('expTo').value      = today;
+  } catch {}
+}
+
+// ============================================================
+//  ELIMINAR USUARIO Y TODOS SUS REGISTROS
+// ============================================================
+let deleteTargetCedula = null;   // cédula confirmada para borrar
+let deleteTargetDocs   = [];     // IDs de documentos a eliminar
+
+let delCedulaTimer;
+function onDelCedulaInput(val) {
+  clearTimeout(delCedulaTimer);
+  document.getElementById('delUserPreview').style.display  = 'none';
+  document.getElementById('delConfirmBox').style.display   = 'none';
+  document.getElementById('delSearchBtn').style.display    = 'block';
+  deleteTargetCedula = null;
+  deleteTargetDocs   = [];
+  if (val.length < 5) return;
+  delCedulaTimer = setTimeout(() => autoPreviewUser(val), 700);
+}
+
+// Preview rápido mientras escribe (sin mostrar confirmación aún)
+async function autoPreviewUser(cedula) {
+  try {
+    const snap = await db.collection('registros')
+      .where('cedula', '==', cedula).limit(3).get();
+    if (!snap.empty) {
+      const d = snap.docs[0].data();
+      document.getElementById('delUserName').textContent =
+        `👤 ${d.nombreCompleto || d.nombre + ' ' + d.apellido}  ·  🪪 ${cedula}`;
+      document.getElementById('delUserStats').textContent =
+        `Se encontraron registros para esta cédula`;
+      document.getElementById('delUserPreview').style.display = 'block';
+    } else {
+      document.getElementById('delUserPreview').style.display = 'none';
+    }
+  } catch { /* silencioso */ }
+}
+
+// Búsqueda completa al pulsar el botón
+async function searchUserToDelete() {
+  const cedula = (document.getElementById('delCedula').value || '').trim();
+  if (!cedula || cedula.length < 5) {
+    toast('⚠️ Ingresa una cédula válida', 'warn'); return;
+  }
+
+  loading('Buscando registros del usuario…');
+  try {
+    const snap = await db.collection('registros')
+      .where('cedula', '==', cedula).get();
+
+    hideLoad();
+
+    if (snap.empty) {
+      document.getElementById('delUserPreview').style.display  = 'none';
+      document.getElementById('delConfirmBox').style.display   = 'none';
+      toast('❌ No se encontraron registros para esa cédula', 'err', 4000);
+      return;
+    }
+
+    // Guardar info para el borrado
+    deleteTargetCedula = cedula;
+    deleteTargetDocs   = snap.docs.map(d => ({ id: d.id, fotos: d.data().fotos || [] }));
+
+    const d         = snap.docs[0].data();
+    const nombre    = d.nombreCompleto || `${d.nombre} ${d.apellido}`;
+    const totalVal  = snap.docs.reduce((s, x) => s + (x.data().valor || 0), 0);
+    const totalFoto = snap.docs.reduce((s, x) => s + (x.data().fotos || []).length, 0);
+
+    // Mostrar preview detallado
+    document.getElementById('delUserName').textContent =
+      `👤 ${nombre}  ·  🪪 ${cedula}`;
+    document.getElementById('delUserStats').innerHTML =
+      `📋 ${snap.docs.length} registro(s)  &nbsp;·&nbsp;  ` +
+      `💵 $${totalVal.toFixed(2)}  &nbsp;·&nbsp;  ` +
+      `📸 ${totalFoto} foto(s)`;
+    document.getElementById('delUserPreview').style.display = 'block';
+
+    // Mostrar confirmación
+    document.getElementById('delConfirmBox').style.display = 'block';
+    document.getElementById('delSearchBtn').style.display  = 'none';
+
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error: ' + e.message, 'err', 5000);
+  }
+}
+
+function cancelDelete() {
+  deleteTargetCedula = null;
+  deleteTargetDocs   = [];
+  document.getElementById('delCedula').value               = '';
+  document.getElementById('delUserPreview').style.display  = 'none';
+  document.getElementById('delConfirmBox').style.display   = 'none';
+  document.getElementById('delSearchBtn').style.display    = 'block';
+  toast('✅ Eliminación cancelada', '', 2000);
+}
+
+async function confirmDelete() {
+  if (!deleteTargetCedula || !deleteTargetDocs.length) return;
+
+  loading(`Eliminando ${deleteTargetDocs.length} registro(s)…`);
+  try {
+    let fotoCount = 0;
+
+    // 1. Eliminar fotos de Storage
+    for (const doc of deleteTargetDocs) {
+      for (const foto of doc.fotos) {
+        try {
+          await storage.ref(foto.path).delete();
+          fotoCount++;
+        } catch { fotoCount++; /* ya eliminada */ }
+      }
+    }
+
+    // 2. Eliminar documentos de Firestore en lotes de 20
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < deleteTargetDocs.length; i += BATCH_SIZE) {
+      const batch = db.batch();
+      deleteTargetDocs.slice(i, i + BATCH_SIZE).forEach(doc => {
+        batch.delete(db.collection('registros').doc(doc.id));
+      });
+      await batch.commit();
+    }
+
+    invalidatePersonasCache(); // refrescar autocomplete del admin
+    hideLoad();
+
+    // Reset UI
+    const nombre = document.getElementById('delUserName').textContent;
+    document.getElementById('delCedula').value               = '';
+    document.getElementById('delUserPreview').style.display  = 'none';
+    document.getElementById('delConfirmBox').style.display   = 'none';
+    document.getElementById('delSearchBtn').style.display    = 'block';
+    deleteTargetCedula = null;
+    deleteTargetDocs   = [];
+
+    toast(
+      `🗑️ Usuario eliminado · ${deleteTargetDocs.length || '✓'} registros y ${fotoCount} foto(s) borradas`,
+      'ok', 5000
+    );
+
+  } catch (e) {
+    hideLoad();
+    toast('❌ Error al eliminar: ' + e.message, 'err', 6000);
+    console.error(e);
+  }
+}
+
+// ============================================================
+//  INACTIVIDAD — cierre automático de sesión
+//  • Espera 5 min sin actividad → muestra modal con cuenta regresiva de 20 seg
+//  • Si el usuario toca "Continuar" → reinicia el timer
+//  • Si no hace nada en 20 seg o toca "Salir" → cierra sesión
+// ============================================================
+const INACTIVITY_MS  = 5 * 60 * 1000;  // 5 minutos sin actividad
+const COUNTDOWN_SECS = 20;              // segundos del aviso
+
+let inactivityTimer   = null;
+let countdownTimer    = null;
+let countdownCurrent  = COUNTDOWN_SECS;
+
+// Eventos que cuentan como actividad
+const ACTIVITY_EVENTS = ['touchstart','touchmove','click','keypress','scroll','mousemove'];
+
+function resetInactivity() {
+  if (!currentUser) return;             // solo si hay sesión activa
+  clearTimeout(inactivityTimer);
+  hideInactivityModal();
+  inactivityTimer = setTimeout(showInactivityModal, INACTIVITY_MS);
+}
+
+function startInactivityWatch() {
+  ACTIVITY_EVENTS.forEach(ev =>
+    document.addEventListener(ev, resetInactivity, { passive: true })
+  );
+  resetInactivity();
+}
+
+function stopInactivityWatch() {
+  ACTIVITY_EVENTS.forEach(ev =>
+    document.removeEventListener(ev, resetInactivity)
+  );
+  clearTimeout(inactivityTimer);
+  clearInterval(countdownTimer);
+  inactivityTimer  = null;
+  countdownTimer   = null;
+}
+
+function showInactivityModal() {
+  if (!currentUser) return;
+  const modal = document.getElementById('inactivityModal');
+  modal.style.display = 'flex';
+  countdownCurrent = COUNTDOWN_SECS;
+  updateCountdownUI(countdownCurrent);
+
+  countdownTimer = setInterval(() => {
+    countdownCurrent--;
+    updateCountdownUI(countdownCurrent);
+    if (countdownCurrent <= 0) {
+      clearInterval(countdownTimer);
+      doLogout();
+    }
+  }, 1000);
+}
+
+function hideInactivityModal() {
+  document.getElementById('inactivityModal').style.display = 'none';
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+}
+
+function continueSession() {
+  hideInactivityModal();
+  resetInactivity();
+  toast('✅ Sesión continuada', 'ok', 2000);
+}
+
+function updateCountdownUI(secs) {
+  document.getElementById('countdownNum').textContent = secs;
+  // Animar el círculo SVG: circumference = 2π×34 ≈ 213.6
+  const circ   = 213.6;
+  const offset = circ * (1 - secs / COUNTDOWN_SECS);
+  document.getElementById('countdownCircle').style.strokeDashoffset = offset;
+  // Cambiar color según urgencia
+  const color = secs > 10 ? '#f59e0b' : '#ef4444';
+  document.getElementById('countdownCircle').style.stroke = color;
+  document.getElementById('countdownNum').style.color = color;
+}
+
+// ── Conectar con doLogin / doLogout ──────────────────────────
+// (se llama después de hacer login exitoso)
+function onLoginSuccess() {
+  startInactivityWatch();
+}
+// (se llama antes de cerrar sesión)
+function onLogoutCleanup() {
+  stopInactivityWatch();
+  hideInactivityModal();
+}
+
+// ============================================================
+//  SERVICE WORKER (PWA)
+// ============================================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(e => {
+      console.log('SW registration failed:', e);
+    });
+  });
+}
+
+// ============================================================
+//  ENTER KEY ON LOGIN
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginPass').addEventListener('keypress', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('loginUser').addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('loginPass').focus();
+  });
+});
+</script>
+</body>
+</html>
